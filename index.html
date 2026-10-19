@@ -1186,10 +1186,14 @@ const pad = n => String(n).padStart(2,'0');
   if (reduce) return;
   const c = $('#dust'), ctx = c.getContext('2d'), hero = c.parentElement;
   let w = 0, h = 0, dpr = 1, parts = [], run = true, vis = true, raf = 0, t = 0;
+  const glow = document.createElement('canvas'); glow.width = glow.height = 64;
+  { const g = glow.getContext('2d').createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0,'rgba(214,168,70,1)'); g.addColorStop(1,'rgba(214,168,70,0)');
+    const gc = glow.getContext('2d'); gc.fillStyle = g; gc.fillRect(0,0,64,64); }
   function size(){
     const nw = hero.clientWidth, nh = hero.clientHeight;
     if (nw === w && nh === h) return;            /* mobile URL-bar resizes: keep the particles running */
-    w = nw; h = nh; dpr = Math.min(devicePixelRatio||1, 2);
+    w = nw; h = nh; dpr = Math.min(devicePixelRatio||1, w < 700 ? 1 : 2);   /* soft glows: 1x is identical on phones and far cheaper */
     c.width = w*dpr; c.height = h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
     const n = w < 700 ? 22 : 46;
     parts = Array.from({length:n}, () => mk(true));
@@ -1205,10 +1209,10 @@ const pad = n => String(n).padStart(2,'0');
       p.y -= p.vy; p.x += Math.sin(t*p.sp+p.ph)*.25;
       if (p.y < -10){ Object.assign(p, mk(false)); }
       const tw = .55 + .45*Math.sin(t*p.sp*2+p.ph);
-      const g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*4);
-      g.addColorStop(0,`rgba(214,168,70,${p.a*tw})`); g.addColorStop(1,'rgba(214,168,70,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*4,0,6.283); ctx.fill();
+      const d = p.r*8;
+      ctx.globalAlpha = p.a*tw; ctx.drawImage(glow, p.x-p.r*4, p.y-p.r*4, d, d);
     }
+    ctx.globalAlpha = 1;
     raf = requestAnimationFrame(frame);
   }
   const kick = () => { if (!raf && run && vis) raf = requestAnimationFrame(frame); };
@@ -1330,8 +1334,9 @@ const pad = n => String(n).padStart(2,'0');
     tick = false; if (!near) return;
     const r = tl.getBoundingClientRect(), mid = innerHeight*.62;
     const p = Math.max(0, Math.min(1, (mid - r.top) / r.height));
+    const tops = items.map((li,i) => i === 0 ? 0 : $('.node', li).getBoundingClientRect().top);
     tl.style.setProperty('--p', p);
-    items.forEach((li,i) => { if (i === 0) return; const n = $('.node', li).getBoundingClientRect(); li.classList.toggle('on', n.top < mid); });
+    items.forEach((li,i) => { if (i === 0) return; li.classList.toggle('on', tops[i] < mid); });
   }
   const req = () => { if (!tick){ tick = true; requestAnimationFrame(upd); } };
   new IntersectionObserver(es => { near = es[0].isIntersecting; if (near) req(); }, {rootMargin:'30% 0px 30% 0px'}).observe(tl);
@@ -1596,11 +1601,9 @@ const pad = n => String(n).padStart(2,'0');
   function req(){ if (!tick && !reduce){ tick = true; requestAnimationFrame(upd); } }
   function upd(){
     tick = false; if (!near) return;
-    cards.forEach(c => {
-      const r = c.getBoundingClientRect();
-      const p = Math.max(-1, Math.min(1, ((r.top + r.height/2) - innerHeight/2) / innerHeight));
-      c.style.setProperty('--sp', p.toFixed(3));
-    });
+    const vh = innerHeight;
+    const ps = cards.map(c => { const r = c.getBoundingClientRect(); return Math.max(-1, Math.min(1, ((r.top + r.height/2) - vh/2) / vh)).toFixed(3); });
+    cards.forEach((c, i) => { if (c._sp !== ps[i]){ c._sp = ps[i]; c.style.setProperty('--sp', ps[i]); } });
   }
   addEventListener('scroll', req, {passive:true}); addEventListener('resize', req); req();
 
@@ -1760,11 +1763,17 @@ const pad = n => String(n).padStart(2,'0');
 
     fill.style.transform = `scaleX(${p.toFixed(4)})`;
     if (dark !== wasDark){ bar.classList.toggle('on-dark', dark); wasDark = dark; }
-    if (scale) depth.forEach(o => { const q = prog(o.sec); if (q !== null) o.el.style.translate = `0 ${((q - .5) * o.d * scale).toFixed(1)}px`; });
-    if (!reduce) lights.forEach(o => { const q = prog(o.sec); if (q !== null) o.el.style.setProperty('--jl', Math.sin(Math.PI * clamp01(q)).toFixed(3)); });
+    if (scale) depth.forEach(o => { const q = prog(o.sec); if (q !== null){ const v = `0 ${((q - .5) * o.d * scale).toFixed(1)}px`; if (o.t !== v){ o.t = v; o.el.style.translate = v; } } });
+    if (!reduce) lights.forEach(o => { const q = prog(o.sec); if (q !== null){ const v = Math.sin(Math.PI * clamp01(q)).toFixed(3); if (o.j !== v){ o.j = v; o.el.style.setProperty('--jl', v); } } });
   }
   const req = () => { if (!ticking){ ticking = true; requestAnimationFrame(frame); } };
-  const clearDepth = () => { if (reduce || small.matches) depth.forEach(o => o.el.style.translate = ''); req(); };
+  let depthCleared = false;
+  const clearDepth = () => {
+    const off = reduce || small.matches;
+    if (off && !depthCleared){ depth.forEach(o => { o.el.style.translate = ''; o.t = null; }); depthCleared = true; }
+    else if (!off) depthCleared = false;
+    req();
+  };
 
   const sio = new IntersectionObserver(es => { es.forEach(e => e.isIntersecting ? near.add(e.target) : near.delete(e.target)); req(); }, {rootMargin:'15% 0px 15% 0px'});
   secs.forEach(s => sio.observe(s));
