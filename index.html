@@ -561,6 +561,17 @@ textarea.bk-in{min-height:112px;resize:vertical;line-height:1.55}
   .chapter.open .ch-veil{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 }
 
+/* Mobile chapter rendering: no continuous scroll-dependent repaint.
+   One-time entrance and interactive opening animations remain intact. */
+@media (max-width:1000px) and (hover:none), (max-width:640px){
+  .chapters .ch-l{transform:none!important}
+  .chapters .chapter{will-change:auto;transition-property:transform,opacity,box-shadow}
+  .chapters .ch-grainl{mix-blend-mode:normal;opacity:.10}
+  .chapters .chapter:not(.open) .ch-veil{backdrop-filter:none;-webkit-backdrop-filter:none}
+  .chapters .ch-grid.has-open .chapter:not(.open){filter:none}
+  .chapters .chapter::before{background:radial-gradient(circle at 50% 46%,rgba(247,236,218,.15),transparent 46%)}
+}
+
 /* ---------- launch countdown: "the moment" ---------- */
 .moment{position:relative;isolation:isolate;overflow:hidden;background:var(--wine-deep);color:var(--cream);text-align:center;padding:clamp(90px,14vw,180px) 0 clamp(190px,24vw,300px)}
 .mo-bg{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;transition:opacity 2.4s var(--ease)}
@@ -1562,9 +1573,9 @@ const pad = n => String(n).padStart(2,'0');
     close.addEventListener('click', () => closeAll(true));
   });
 
-  /* touch / no-hover: the chapter nearest the middle of the screen glows, as a stand-in for hover */
-  if (!fine && !reduce){
-    // Choose one stable centre card per frame; avoid observer boundary chatter.
+  /* Mobile: avoid repeated heavy glow/shadow transitions while scrolling.
+     Reveal each card once; tapping still opens its animated veil. */
+  if (!fine && !reduce && !mobileLayout()){
     let hotFrame = 0, active = null;
     const syncHot = () => {
       hotFrame = 0;
@@ -1589,9 +1600,9 @@ const pad = n => String(n).padStart(2,'0');
   /* scroll drift for the layered art, only while the grid is near the viewport */
   let near = false, tick = false;
   new IntersectionObserver(es => { near = es[0].isIntersecting; if (near) req(); }, {rootMargin:'20% 0px 20% 0px'}).observe(grid);
-  function req(){ if (near && !tick && !reduce){ tick = true; requestAnimationFrame(upd); } }
+  function req(){ if (near && !tick && !reduce && !mobileLayout()){ tick = true; requestAnimationFrame(upd); } }
   function upd(){
-    tick = false; if (!near) return;
+    tick = false; if (!near || mobileLayout()) return;
     cards.forEach(c => {
       const r = c.getBoundingClientRect();
       const p = Math.max(-1, Math.min(1, ((r.top + r.height/2) - innerHeight/2) / innerHeight));
