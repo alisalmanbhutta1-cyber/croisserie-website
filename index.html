@@ -773,6 +773,14 @@ main:focus{outline:none}
   .nav .btn{padding:.55em 1em;font-size:.8rem;white-space:nowrap}
   .btn-cta{letter-spacing:.16em;padding-inline:1.5em}
 }
+@media (hover:none) and (pointer:coarse){
+  .nav::before{-webkit-backdrop-filter:none;backdrop-filter:none}    /* fixed-header blur is re-computed on every scroll frame; bar is 92% opaque anyway */
+  .ch-l{transition:transform .7s var(--ease)}                        /* scroll drift now lands when scrolling settles, eased */
+  .m-layer,.m-light{transition:transform .8s var(--ease)}
+  #mDusk,#mSpill{transition:opacity .8s var(--ease)}
+  .arch-m i{transition:transform .8s var(--ease),opacity .8s var(--ease)}
+  .ch-halo,.up-arc,.mo-top{transition:opacity .4s linear}
+}
 /* touch phones: anything that changes while scrolling gets its own small layer, so the big shadowed arches are not repainted */
 @media (hover:none) and (pointer:coarse){
   #mDusk,#mSpill,.m-light{will-change:opacity,transform}
@@ -1325,8 +1333,10 @@ const pad = n => String(n).padStart(2,'0');
   io.observe(content);
 
   /* background responds to scroll only while the section is near the viewport */
-  let near = false, ticking = false;
-  const request = () => { if (!ticking){ ticking = true; requestAnimationFrame(update); } };
+  let near = false, ticking = false, settleT = 0;
+  const touchy = !matchMedia('(hover:hover) and (pointer:fine)').matches;
+  function go(){ if (!ticking){ ticking = true; requestAnimationFrame(update); } }
+  function request(){ if (touchy){ clearTimeout(settleT); settleT = setTimeout(go, 100); } else go(); }
   new IntersectionObserver(es => { near = es[0].isIntersecting; sec.classList.toggle('off', !near); if (near) request(); }, {rootMargin:'30% 0px 30% 0px'}).observe(sec);
 
   function update(){
@@ -1626,9 +1636,10 @@ const pad = n => String(n).padStart(2,'0');
   }
 
   /* scroll drift for the layered art, only while the grid is near the viewport */
-  let near = false, tick = false;
+  let near = false, tick = false, settleT = 0;
   new IntersectionObserver(es => { near = es[0].isIntersecting; if (near) req(); }, {rootMargin:'20% 0px 20% 0px'}).observe(grid);
-  function req(){ if (!tick && !reduce){ tick = true; requestAnimationFrame(upd); } }
+  function go(){ if (!tick){ tick = true; requestAnimationFrame(upd); } }
+  function req(){ if (reduce) return; if (fine) go(); else { clearTimeout(settleT); settleT = setTimeout(go, 100); } }
   function upd(){
     tick = false; if (!near) return;
     const vh = innerHeight;
@@ -1780,7 +1791,8 @@ const pad = n => String(n).padStart(2,'0');
   const near = new Set();
   const small = matchMedia('(max-width:560px)'), mid = matchMedia('(max-width:900px)');
   const clamp01 = v => Math.min(1, Math.max(0, v));
-  let ticking = false, wasDark = null;
+  let ticking = false, wasDark = null, lastL = 0, jt = 0;
+  const touchy = !matchMedia('(hover:hover) and (pointer:fine)').matches;
 
   function frame(){
     ticking = false;
@@ -1794,7 +1806,10 @@ const pad = n => String(n).padStart(2,'0');
     fill.style.transform = `scaleX(${p.toFixed(4)})`;
     if (dark !== wasDark){ bar.classList.toggle('on-dark', dark); wasDark = dark; }
     if (scale) depth.forEach(o => { const q = prog(o.sec); if (q !== null){ const v = `0 ${((q - .5) * o.d * scale).toFixed(1)}px`; if (o.t !== v){ o.t = v; o.el.style.translate = v; } } });
-    if (!reduce) lights.forEach(o => { const q = prog(o.sec); if (q !== null){ const v = Math.sin(Math.PI * clamp01(q)).toFixed(3); if (o.j !== v){ o.j = v; o.el.style.setProperty('--jl', v); } } });
+    const nowT = performance.now();
+    const skip = touchy && nowT - lastL <= 250;
+    if (skip){ clearTimeout(jt); jt = setTimeout(() => { lastL = 0; req(); }, 260); }   /* catch-up once scrolling pauses; never loops */
+    if (!reduce && !skip) { lastL = nowT; lights.forEach(o => { const q = prog(o.sec); if (q !== null){ const v = Math.sin(Math.PI * clamp01(q)).toFixed(3); if (o.j !== v){ o.j = v; o.el.style.setProperty('--jl', v); } } }); }
   }
   const req = () => { if (!ticking){ ticking = true; requestAnimationFrame(frame); } };
   let depthCleared = false;
