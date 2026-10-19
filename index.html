@@ -824,43 +824,14 @@ main:focus{outline:none}
       <h1 class="headline"><span class="w" style="--i:0"><span>Something</span></span> <span class="w" style="--i:1"><span><em>Extraordinary</em></span></span> <span class="w" style="--i:2"><span>Is</span></span> <span class="w" style="--i:3"><span>Taking</span></span> <span class="w" style="--i:4"><span>Shape.</span></span></h1>
       <div class="support-rule" aria-hidden="true"></div>
       <p class="support"><span>Three Creations.</span> <span>One Obsession.</span></p>
-      <!-- Scrolls to the #mystery section (falls back to #updates if it is ever removed). -->
+      <!-- Scrolls directly to the Mystery Chapters section. -->
       <div class="cta-wrap">
-        <a class="btn btn-primary btn-cta" id="heroCta" href="#mystery"><span>DISCOVER WHAT’S COMING</span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15M6 13.5l6 6 6-6"/></svg></a>
+        <a class="btn btn-primary btn-cta" id="heroCta" href="#chapters"><span>DISCOVER WHAT’S COMING</span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15M6 13.5l6 6 6-6"/></svg></a>
       </div>
     </div>
     <div class="grain" aria-hidden="true"></div>
   </section>
   <div class="awning" aria-hidden="true"></div>
-
-  <section class="mystery" id="mystery" aria-labelledby="mystery-h">
-    <div class="m-bg" aria-hidden="true">
-      <div class="m-base"></div>
-      <div class="m-dusk" id="mDusk"></div>
-      <div class="m-layer" data-my="-70"><div class="m-blob mb1"></div><div class="m-blob mb2"></div></div>
-      <div class="m-layer" data-my="-36"><div class="shaft sh1"></div><div class="shaft sh2"></div><div class="shaft sh3"></div></div>
-      <!-- three closed arched doors, each with a thin line of light: nothing is revealed -->
-      <div class="m-arches" id="mArches">
-        <div class="m-layer" data-my="-22"><div class="arch-m am1"><i></i></div></div>
-        <div class="m-layer" data-my="-10"><div class="arch-m am2"><i></i></div></div>
-        <div class="m-layer" data-my="-34"><div class="arch-m am3"><i></i></div></div>
-      </div>
-      <div class="m-light" id="mLight"></div>
-      <div class="m-spill" id="mSpill"></div>
-      <div class="m-shadow"></div>
-      <div class="m-vignette"></div>
-      <div class="m-fade"></div>
-    </div>
-    <div class="m-frame" aria-hidden="true"></div>
-    <span class="m-thread" aria-hidden="true"></span>
-    <div class="wrap m-content" id="mContent">
-      <svg class="m-fleur" aria-hidden="true"><use href="#fleur"/></svg>
-      <p class="m-label"><span>THE ART OF ANTICIPATION</span></p>
-      <h2 class="mh" id="mystery-h"><span class="w" style="--i:0"><span>NOT</span></span> <span class="w" style="--i:1"><span>EVERYTHING</span></span> <span class="w" style="--i:2"><span>IS</span></span> <span class="w" style="--i:3"><span>MEANT</span></span> <span class="w" style="--i:4"><span>TO</span></span> <span class="w" style="--i:5"><span>BE</span></span> <span class="w" style="--i:6"><span><em>REVEALED.</em></span></span></h2>
-      <p class="m-text">Something special is coming to <b>CROISSERIE</b>. Three creations are taking shape, and their stories will soon unfold.</p>
-    </div>
-    <div class="grain" aria-hidden="true"></div>
-  </section>
 
   <section class="chapters" id="chapters" aria-labelledby="chapters-h">
     <div class="ch-bg" aria-hidden="true"><div class="ch-halo" data-depth="60" data-jl></div><div class="ch-arc x1" data-depth="-80"></div><div class="ch-arc x2" data-depth="-35"></div></div>
@@ -1230,10 +1201,10 @@ const pad = n => String(n).padStart(2,'0');
   const hero = $('#hero'), inner = $('#heroInner'), cta = $('#heroCta');
   const layers = $$('[data-px]', hero);
 
-  /* button: ripple on click, then smooth scroll to the mystery section (falls back to #updates) */
+  /* button: ripple on click, then smooth scroll to the Mystery Chapters section */
   cta.addEventListener('click', e => {
     e.preventDefault();
-    const target = document.getElementById('mystery') || document.getElementById('updates');
+    const target = document.getElementById('chapters');
     if (!reduce){
       const r = cta.getBoundingClientRect();
       const x = e.detail ? e.clientX - r.left : r.width/2, y = e.detail ? e.clientY - r.top : r.height/2;
