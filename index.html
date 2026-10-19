@@ -778,7 +778,6 @@ main:focus{outline:none}
   .ch-veil{-webkit-backdrop-filter:none;backdrop-filter:none}               /* veil is ~90% opaque: blur only matters once a card is open */
   .chapter.open .ch-veil{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
   .ch-l,.ch-grainl,.ch-veil{-webkit-backface-visibility:hidden;backface-visibility:hidden}
-  .chapter{contain:layout paint}
 }
 </style>
 </head>
@@ -1598,8 +1597,13 @@ const pad = n => String(n).padStart(2,'0');
 
   /* touch / no-hover: the chapter nearest the middle of the screen glows, as a stand-in for hover */
   if (!fine && !reduce){
-    const lio = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('hot', e.isIntersecting && !e.target.classList.contains('open') || e.target.classList.contains('open'))), {rootMargin:'-32% 0px -32% 0px'});
+    /* same glow, but it starts when the scroll settles: the big shadow/glow transitions no longer repaint the cards mid-scroll */
+    const pend = new Map(); let hotT = 0;
+    const flush = () => { pend.forEach((on, c) => c.classList.toggle('hot', on || c.classList.contains('open'))); pend.clear(); };
+    const later = () => { clearTimeout(hotT); hotT = setTimeout(flush, 140); };
+    const lio = new IntersectionObserver(es => { es.forEach(e => pend.set(e.target, e.isIntersecting)); later(); }, {rootMargin:'-32% 0px -32% 0px'});
     cards.forEach(c => lio.observe(c));
+    addEventListener('scroll', () => { if (pend.size) later(); }, {passive:true});
   }
 
   /* scroll drift for the layered art, only while the grid is near the viewport */
