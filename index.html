@@ -554,6 +554,13 @@ textarea.bk-in{min-height:112px;resize:vertical;line-height:1.55}
   .ch-l{transform:none}
 }
 
+/* Mobile compositing: retain all reveals and artwork, but only blur a visible chapter veil. */
+@media (max-width:640px){
+  .ch-veil:not(.chapter.open .ch-veil){-webkit-backdrop-filter:none;backdrop-filter:none}
+  .chapter,.ch-l,.m-layer,.m-blob{will-change:auto}
+  .chapter.open .ch-veil{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+}
+
 /* ---------- launch countdown: "the moment" ---------- */
 .moment{position:relative;isolation:isolate;overflow:hidden;background:var(--wine-deep);color:var(--cream);text-align:center;padding:clamp(90px,14vw,180px) 0 clamp(190px,24vw,300px)}
 .mo-bg{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;transition:opacity 2.4s var(--ease)}
@@ -1304,7 +1311,7 @@ const pad = n => String(n).padStart(2,'0');
 
   /* background responds to scroll only while the section is near the viewport */
   let near = false, ticking = false;
-  const request = () => { if (!ticking){ ticking = true; requestAnimationFrame(update); } };
+  const request = () => { if (near && !ticking){ ticking = true; requestAnimationFrame(update); } };
   new IntersectionObserver(es => { near = es[0].isIntersecting; sec.classList.toggle('off', !near); if (near) request(); }, {rootMargin:'30% 0px 30% 0px'}).observe(sec);
 
   function update(){
@@ -1586,21 +1593,32 @@ const pad = n => String(n).padStart(2,'0');
 
   /* touch / no-hover: the chapter nearest the middle of the screen glows, as a stand-in for hover */
   if (!fine && !reduce){
-    /* .hot starts ~1s of layout (letter-spacing, width, margin) and large box-shadow transitions on every card;
-       toggling it mid-scroll ran those on the main thread during the scroll itself. Same effect, same timings:
-       the class is simply applied once the scroll settles instead of while the finger is still moving. */
-    const inBand = new Map(); let settle = 0;
-    const applyHot = () => inBand.forEach((on, c) => c.classList.toggle('hot', on && !c.classList.contains('open') || c.classList.contains('open')));
-    const later = () => { clearTimeout(settle); settle = setTimeout(applyHot, 140); };
-    const lio = new IntersectionObserver(es => { es.forEach(e => inBand.set(e.target, e.isIntersecting)); later(); }, {rootMargin:'-32% 0px -32% 0px'});
-    cards.forEach(c => lio.observe(c));
-    addEventListener('scroll', later, {passive:true});
+    // Choose one stable centre card per frame; avoid observer boundary chatter.
+    let hotFrame = 0, active = null;
+    const syncHot = () => {
+      hotFrame = 0;
+      const mid = innerHeight / 2;
+      let best = null, distance = Infinity;
+      cards.forEach(c => {
+        const r = c.getBoundingClientRect();
+        if (r.bottom <= 0 || r.top >= innerHeight) return;
+        const d = Math.abs((r.top + r.bottom) / 2 - mid);
+        if (d < distance) { distance = d; best = c; }
+      });
+      if (best === active) return;
+      cards.forEach(c => c.classList.toggle('hot', c === best || c.classList.contains('open')));
+      active = best;
+    };
+    const queueHot = () => { if (!hotFrame) hotFrame = requestAnimationFrame(syncHot); };
+    addEventListener('scroll', queueHot, {passive:true});
+    addEventListener('resize', queueHot);
+    queueHot();
   }
 
   /* scroll drift for the layered art, only while the grid is near the viewport */
   let near = false, tick = false;
   new IntersectionObserver(es => { near = es[0].isIntersecting; if (near) req(); }, {rootMargin:'20% 0px 20% 0px'}).observe(grid);
-  function req(){ if (!tick && !reduce){ tick = true; requestAnimationFrame(upd); } }
+  function req(){ if (near && !tick && !reduce){ tick = true; requestAnimationFrame(upd); } }
   function upd(){
     tick = false; if (!near) return;
     cards.forEach(c => {
