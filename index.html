@@ -773,6 +773,13 @@ main:focus{outline:none}
   .nav .btn{padding:.55em 1em;font-size:.8rem;white-space:nowrap}
   .btn-cta{letter-spacing:.16em;padding-inline:1.5em}
 }
+/* touch devices, chapters only: lighter compositing so the cards stop flickering while scrolling (look unchanged) */
+@media (hover:none) and (pointer:coarse){
+  .ch-veil{-webkit-backdrop-filter:none;backdrop-filter:none}               /* veil is ~90% opaque: blur only matters once a card is open */
+  .chapter.open .ch-veil{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .ch-l,.ch-grainl,.ch-veil{-webkit-backface-visibility:hidden;backface-visibility:hidden}
+  .chapter{contain:layout paint}
+}
 </style>
 </head>
 <body>
